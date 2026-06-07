@@ -13,7 +13,6 @@
     "dev:client": "vite --host 0.0.0.0",
     "build": "tsc -p tsconfig.server.json && vite build",
     "start": "NODE_ENV=production node dist/server/src/server/index.js",
-    "start:render": "npm run db:migrate && npm run admin:create && npm start",
     "db:schema": "psql \"$DATABASE_URL\" -f database/schema.sql",
     "db:migrate": "tsx scripts/migrate.ts",
     "admin:create": "tsx scripts/create-admin.ts",

@@ -8,12 +8,15 @@ Curiosity Link is a production-ready Instagram bio landing page with private ana
 curiosity-link/
   database/schema.sql
   scripts/create-admin.ts
+  api/
+    [...path].ts
   src/client/
     App.tsx
     api.ts
     main.tsx
     styles.css
   src/server/
+    app.ts
     auth.ts
     db.ts
     index.ts
@@ -25,6 +28,7 @@ curiosity-link/
   package.json
   tsconfig.json
   tsconfig.server.json
+  vercel.json
   vite.config.ts
 ```
 
@@ -69,34 +73,32 @@ Change them immediately before using the app publicly.
 
 ## Production Deployment
 
-### Fastest Path: Render Blueprint
+### Vercel + Supabase
 
-This repo includes `render.yaml`, which creates a free hobby deployment:
+This repo is configured for Vercel:
 
-- A Node web service
-- A managed PostgreSQL database
-- Generated `SESSION_SECRET`
-- Health checks
-- Automatic schema/admin setup when the service starts
+- React/Vite frontend builds to `dist/client`
+- `/api/*` is served by a Vercel Node Function in `api/[...path].ts`
+- PostgreSQL is provided by Supabase
 
 Steps:
 
-1. Push this repo to GitHub.
-2. In Render, choose **New > Blueprint**.
-3. Select the GitHub repo.
-4. Before the first deploy, set:
-   - `ADMIN_PASSWORD`: a strong private password
-   - `APP_ORIGIN`: your Render service URL, for example `https://curiosity-link.onrender.com`
-5. Deploy.
-6. Visit `/admin` and log in with `ADMIN_USERNAME` plus your password.
-
-The start command runs `npm run db:migrate` and `npm run admin:create` automatically. Both are idempotent. This avoids Render's free-tier restriction on pre-deploy commands.
-
-Free Render services are suitable for hobby/testing projects and may have free-tier limitations such as sleeping after inactivity. That is fine for a playful Instagram bio link, but not for a revenue-critical app.
+1. Link or create the Supabase project.
+2. Run `database/schema.sql` against Supabase.
+3. Seed the admin user with `npm run admin:create`.
+4. Import the GitHub repo into Vercel or deploy with `vercel --prod`.
+5. Set Vercel environment variables:
+   - `DATABASE_URL`
+   - `DATABASE_SSL=true`
+   - `SESSION_SECRET`
+   - `APP_ORIGIN=https://your-vercel-domain.vercel.app`
+   - `ADMIN_USERNAME=admin`
+   - `ADMIN_PASSWORD`
+6. Visit `/admin` and log in with your admin credentials.
 
 ### Generic Node Host
 
-1. Create a PostgreSQL database on Render, Railway, Fly.io, Supabase, Neon, or another managed provider.
+1. Create a PostgreSQL database on Railway, Fly.io, Supabase, Neon, or another managed provider.
 2. Set production environment variables:
    - `NODE_ENV=production`
    - `DATABASE_URL`

@@ -35,6 +35,7 @@ ALTER TABLE visits ADD COLUMN IF NOT EXISTS location_source TEXT NOT NULL DEFAUL
 CREATE INDEX IF NOT EXISTS idx_visits_visited_at ON visits (visited_at DESC);
 CREATE INDEX IF NOT EXISTS idx_visits_visitor_id ON visits (visitor_id);
 CREATE INDEX IF NOT EXISTS idx_visits_country ON visits (country);
+ALTER TABLE visits ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
@@ -70,6 +71,7 @@ Now tell me—what made you do it? 😉',
   '#070711'
 )
 ON CONFLICT (id) DO NOTHING;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS "session" (
   "sid" varchar NOT NULL COLLATE "default",
@@ -79,3 +81,5 @@ CREATE TABLE IF NOT EXISTS "session" (
 );
 
 CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "session" ENABLE ROW LEVEL SECURITY;
