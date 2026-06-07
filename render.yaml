@@ -2,9 +2,10 @@ services:
   - type: web
     name: curiosity-link
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run build
-    startCommand: npm run start:render
+    preDeployCommand: npm run db:migrate && npm run admin:create
+    startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -26,4 +27,4 @@ services:
 
 databases:
   - name: curiosity-link-db
-    plan: starter
+    plan: free

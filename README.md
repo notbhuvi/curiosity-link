@@ -71,13 +71,13 @@ Change them immediately before using the app publicly.
 
 ### Fastest Path: Render Blueprint
 
-This repo includes `render.yaml`, which creates:
+This repo includes `render.yaml`, which creates a free hobby deployment:
 
 - A Node web service
 - A managed PostgreSQL database
 - Generated `SESSION_SECRET`
 - Health checks
-- Automatic schema/admin setup on service start
+- Automatic schema/admin setup before deploy
 
 Steps:
 
@@ -90,7 +90,9 @@ Steps:
 5. Deploy.
 6. Visit `/admin` and log in with `ADMIN_USERNAME` plus your password.
 
-The start command runs `npm run db:migrate` and `npm run admin:create` automatically. Both are idempotent.
+The pre-deploy command runs `npm run db:migrate` and `npm run admin:create` automatically. Both are idempotent.
+
+Free Render services are suitable for hobby/testing projects and may have free-tier limitations such as sleeping after inactivity. That is fine for a playful Instagram bio link, but not for a revenue-critical app.
 
 ### Generic Node Host
 
