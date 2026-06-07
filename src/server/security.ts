@@ -32,5 +32,5 @@ export function hashIp(ip: string | undefined) {
 
 export function toCsvCell(value: unknown) {
   const text = value == null ? "" : String(value);
-  return `"${text.replaceAll('"', '""')}"`;
+  return `"${text.replace(/"/g, '""')}"`;
 }

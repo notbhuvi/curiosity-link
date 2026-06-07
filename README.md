@@ -9,7 +9,7 @@ curiosity-link/
   database/schema.sql
   scripts/create-admin.ts
   api/
-    [...path].ts
+    index.ts
   src/client/
     App.tsx
     api.ts

@@ -5,3 +5,4 @@ dist/
 npm-debug.log*
 .vercel/
 supabase/.temp/
+.vercel
