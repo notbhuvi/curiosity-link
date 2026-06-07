@@ -120,7 +120,7 @@ function LandingPage() {
           <div className="after-actions">
             <p className="after-note">Noted. Your curiosity has excellent timing.</p>
             <button className="secondary-button" onClick={() => shareBrowserLocation(setLocationStatus)}>
-              Reveal my city clue
+              Lets check your IQ level
             </button>
             {locationStatus && <p className="after-note">{locationStatus}</p>}
           </div>
