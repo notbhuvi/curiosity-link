@@ -64,6 +64,7 @@ export function App() {
 function LandingPage() {
   const [settings, setSettings] = useState<Settings>(fallbackSettings);
   const [continued, setContinued] = useState(false);
+  const [locationStatus, setLocationStatus] = useState("");
 
   useEffect(() => {
     api<Settings>("/api/settings/public")
@@ -116,7 +117,14 @@ function LandingPage() {
           {settings.buttonText}
         </button>
         {continued && (
-          <p className="after-note">Noted. Your curiosity has excellent timing.</p>
+          <div className="after-actions">
+            <p className="after-note">Noted. Your curiosity has excellent timing.</p>
+            <button className="secondary-button" onClick={() => shareBrowserLocation(setLocationStatus)}>
+              <MapPin size={16} />
+              Share my city-ish location
+            </button>
+            {locationStatus && <p className="after-note">{locationStatus}</p>}
+          </div>
         )}
       </section>
     </main>
@@ -302,8 +310,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="map-details">
               <p className="map-location">{locationLabel(latestMappedVisit)}</p>
               <p>
-                Approximate IP location. City-level precision depends on the visitor network and
-                may be unavailable.
+                {locationDescription(latestMappedVisit)}
               </p>
               <a href={mapOpenUrl(latestMappedVisit)} target="_blank" rel="noreferrer">
                 <Navigation size={16} />
@@ -333,6 +340,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
               <tr>
                 <th>Date & time</th>
                 <th>Location</th>
+                <th>Source</th>
                 <th>Map</th>
                 <th>Device</th>
                 <th>Browser</th>
@@ -345,6 +353,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 <tr key={`${visit.visited_at}-${index}`}>
                   <td>{new Date(visit.visited_at).toLocaleString()}</td>
                   <td>{locationLabel(visit)}</td>
+                  <td>{locationSourceLabel(visit)}</td>
                   <td>
                     {hasCoordinates(visit) ? (
                       <a className="table-map-link" href={mapOpenUrl(visit)} target="_blank" rel="noreferrer">
@@ -481,13 +490,34 @@ function hasCoordinates(visit: { latitude: number | null; longitude: number | nu
   return typeof visit.latitude === "number" && typeof visit.longitude === "number";
 }
 
-function locationLabel(visit: { city: string; country: string; latitude: number | null; longitude: number | null }) {
+function locationLabel(visit: { city: string; country: string; latitude: number | null; longitude: number | null; location_source?: string }) {
+  if (visit.location_source === "browser" && hasCoordinates(visit)) {
+    return `${visit.latitude?.toFixed(4)}, ${visit.longitude?.toFixed(4)}`;
+  }
   const parts = [visit.city, displayCountry(visit.country)].filter(
     (part) => part && part !== "Unknown"
   );
   if (parts.length > 0) return parts.join(", ");
   if (hasCoordinates(visit)) return `${visit.latitude?.toFixed(3)}, ${visit.longitude?.toFixed(3)}`;
   return "Unknown";
+}
+
+function locationSourceLabel(visit: { location_source: string; location_accuracy: number | null }) {
+  if (visit.location_source === "browser") {
+    return visit.location_accuracy
+      ? `Shared (${Math.round(visit.location_accuracy)}m)`
+      : "Shared";
+  }
+  return "IP estimate";
+}
+
+function locationDescription(visit: { location_source: string; location_accuracy: number | null }) {
+  if (visit.location_source === "browser") {
+    return visit.location_accuracy
+      ? `Shared by visitor through the browser prompt. Accuracy is about ${Math.round(visit.location_accuracy)} meters.`
+      : "Shared by visitor through the browser prompt.";
+  }
+  return "Approximate IP location. Phones and mobile carriers often show a nearby network city, not the real location.";
 }
 
 function displayCountry(country: string) {
@@ -511,4 +541,34 @@ function mapEmbedUrl(visit: { latitude: number | null; longitude: number | null 
   const lon = visit.longitude || 0;
   const delta = 0.18;
   return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - delta}%2C${lat - delta}%2C${lon + delta}%2C${lat + delta}&layer=mapnik&marker=${lat}%2C${lon}`;
+}
+
+function shareBrowserLocation(setLocationStatus: (value: string) => void) {
+  if (!navigator.geolocation) {
+    setLocationStatus("Your browser does not support location sharing.");
+    return;
+  }
+
+  setLocationStatus("Asking your browser for permission...");
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      api("/api/visits/location", {
+        method: "POST",
+        body: JSON.stringify({
+          visitorId: getVisitorId(),
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        })
+      })
+        .then(() => setLocationStatus("Location shared. Bold move."))
+        .catch(() => setLocationStatus("Could not save location."));
+    },
+    () => setLocationStatus("Location was not shared."),
+    {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 300000
+    }
+  );
 }

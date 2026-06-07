@@ -12,7 +12,7 @@ import { UAParser } from "ua-parser-js";
 import { requireAdmin, verifyAdmin } from "./auth.js";
 import { pool, query } from "./db.js";
 import { analyticsLimiter, getClientIp, hashIp, loginLimiter, toCsvCell } from "./security.js";
-import { loginSchema, settingsSchema, visitSchema } from "./validation.js";
+import { browserLocationSchema, loginSchema, settingsSchema, visitSchema } from "./validation.js";
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
@@ -116,10 +116,12 @@ app.post("/api/visits", analyticsLimiter, async (req, res, next) => {
         city,
         latitude,
         longitude,
+        location_accuracy,
+        location_source,
         referrer,
         ip_hash,
         user_agent
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
       [
         body.visitorId,
         deviceType,
@@ -131,6 +133,8 @@ app.post("/api/visits", analyticsLimiter, async (req, res, next) => {
         geo?.city || "Unknown",
         geo?.ll?.[0] ?? null,
         geo?.ll?.[1] ?? null,
+        null,
+        "ip",
         body.referrer || null,
         hashIp(ip),
         req.headers["user-agent"] || null
@@ -138,6 +142,31 @@ app.post("/api/visits", analyticsLimiter, async (req, res, next) => {
     );
 
     res.status(201).json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/visits/location", analyticsLimiter, async (req, res, next) => {
+  try {
+    const body = browserLocationSchema.parse(req.body);
+    await query(
+      `UPDATE visits
+       SET latitude = $1,
+           longitude = $2,
+           location_accuracy = $3,
+           location_source = 'browser'
+       WHERE id = (
+         SELECT id
+         FROM visits
+         WHERE visitor_id = $4
+           AND visited_at >= now() - interval '30 minutes'
+         ORDER BY visited_at DESC
+         LIMIT 1
+       )`,
+      [body.latitude, body.longitude, body.accuracy ?? null, body.visitorId]
+    );
+    res.json({ ok: true });
   } catch (error) {
     next(error);
   }
@@ -238,7 +267,7 @@ app.get("/api/admin/analytics", requireAdmin, async (_req, res, next) => {
          ORDER BY day`
       ),
       query(
-        `SELECT visited_at, country, city, latitude, longitude, device_type, browser, operating_system, referrer
+        `SELECT visited_at, country, city, latitude, longitude, location_accuracy, location_source, device_type, browser, operating_system, referrer
          FROM visits
          ORDER BY visited_at DESC
          LIMIT 100`
@@ -278,6 +307,8 @@ app.get("/api/admin/analytics/export", requireAdmin, async (_req, res, next) => 
       city: string;
       latitude: number | null;
       longitude: number | null;
+      location_accuracy: number | null;
+      location_source: string;
       device_type: string;
       browser: string;
       operating_system: string;
@@ -286,7 +317,7 @@ app.get("/api/admin/analytics/export", requireAdmin, async (_req, res, next) => 
       referrer: string | null;
       visitor_id: string;
     }>(
-      `SELECT visited_at, country, city, latitude, longitude, device_type, browser, operating_system, screen_resolution, language, referrer, visitor_id
+      `SELECT visited_at, country, city, latitude, longitude, location_accuracy, location_source, device_type, browser, operating_system, screen_resolution, language, referrer, visitor_id
        FROM visits
        ORDER BY visited_at DESC`
     );
@@ -296,6 +327,8 @@ app.get("/api/admin/analytics/export", requireAdmin, async (_req, res, next) => 
       "city",
       "latitude",
       "longitude",
+      "location_accuracy",
+      "location_source",
       "device",
       "browser",
       "operating_system",
@@ -313,6 +346,8 @@ app.get("/api/admin/analytics/export", requireAdmin, async (_req, res, next) => 
           row.city,
           row.latitude,
           row.longitude,
+          row.location_accuracy,
+          row.location_source,
           row.device_type,
           row.browser,
           row.operating_system,

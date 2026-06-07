@@ -31,6 +31,8 @@ export type RecentVisit = {
   city: string;
   latitude: number | null;
   longitude: number | null;
+  location_accuracy: number | null;
+  location_source: string;
   device_type: string;
   browser: string;
   operating_system: string;
