@@ -77,7 +77,7 @@ This repo includes `render.yaml`, which creates a free hobby deployment:
 - A managed PostgreSQL database
 - Generated `SESSION_SECRET`
 - Health checks
-- Automatic schema/admin setup before deploy
+- Automatic schema/admin setup when the service starts
 
 Steps:
 
@@ -90,7 +90,7 @@ Steps:
 5. Deploy.
 6. Visit `/admin` and log in with `ADMIN_USERNAME` plus your password.
 
-The pre-deploy command runs `npm run db:migrate` and `npm run admin:create` automatically. Both are idempotent.
+The start command runs `npm run db:migrate` and `npm run admin:create` automatically. Both are idempotent. This avoids Render's free-tier restriction on pre-deploy commands.
 
 Free Render services are suitable for hobby/testing projects and may have free-tier limitations such as sleeping after inactivity. That is fine for a playful Instagram bio link, but not for a revenue-critical app.
 
