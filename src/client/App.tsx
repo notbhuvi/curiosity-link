@@ -120,8 +120,7 @@ function LandingPage() {
           <div className="after-actions">
             <p className="after-note">Noted. Your curiosity has excellent timing.</p>
             <button className="secondary-button" onClick={() => shareBrowserLocation(setLocationStatus)}>
-              <MapPin size={16} />
-              Share my city-ish location
+              Reveal my city clue
             </button>
             {locationStatus && <p className="after-note">{locationStatus}</p>}
           </div>
@@ -561,7 +560,7 @@ function shareBrowserLocation(setLocationStatus: (value: string) => void) {
           accuracy: position.coords.accuracy
         })
       })
-        .then(() => setLocationStatus("Location shared. Bold move."))
+        .then(() => setLocationStatus("City clue saved. Bold move."))
         .catch(() => setLocationStatus("Could not save location."));
     },
     () => setLocationStatus("Location was not shared."),
