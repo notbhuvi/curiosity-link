@@ -18,10 +18,15 @@ CREATE TABLE IF NOT EXISTS visits (
   language TEXT NOT NULL,
   country TEXT NOT NULL DEFAULT 'Unknown',
   city TEXT NOT NULL DEFAULT 'Unknown',
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
   referrer TEXT,
   ip_hash TEXT,
   user_agent TEXT
 );
+
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
 
 CREATE INDEX IF NOT EXISTS idx_visits_visited_at ON visits (visited_at DESC);
 CREATE INDEX IF NOT EXISTS idx_visits_visitor_id ON visits (visitor_id);

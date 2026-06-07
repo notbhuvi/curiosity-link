@@ -114,10 +114,12 @@ app.post("/api/visits", analyticsLimiter, async (req, res, next) => {
         language,
         country,
         city,
+        latitude,
+        longitude,
         referrer,
         ip_hash,
         user_agent
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
       [
         body.visitorId,
         deviceType,
@@ -127,6 +129,8 @@ app.post("/api/visits", analyticsLimiter, async (req, res, next) => {
         body.language,
         geo?.country || "Unknown",
         geo?.city || "Unknown",
+        geo?.ll?.[0] ?? null,
+        geo?.ll?.[1] ?? null,
         body.referrer || null,
         hashIp(ip),
         req.headers["user-agent"] || null
@@ -234,7 +238,7 @@ app.get("/api/admin/analytics", requireAdmin, async (_req, res, next) => {
          ORDER BY day`
       ),
       query(
-        `SELECT visited_at, country, city, device_type, browser, operating_system, referrer
+        `SELECT visited_at, country, city, latitude, longitude, device_type, browser, operating_system, referrer
          FROM visits
          ORDER BY visited_at DESC
          LIMIT 100`
@@ -272,6 +276,8 @@ app.get("/api/admin/analytics/export", requireAdmin, async (_req, res, next) => 
       visited_at: Date;
       country: string;
       city: string;
+      latitude: number | null;
+      longitude: number | null;
       device_type: string;
       browser: string;
       operating_system: string;
@@ -280,7 +286,7 @@ app.get("/api/admin/analytics/export", requireAdmin, async (_req, res, next) => 
       referrer: string | null;
       visitor_id: string;
     }>(
-      `SELECT visited_at, country, city, device_type, browser, operating_system, screen_resolution, language, referrer, visitor_id
+      `SELECT visited_at, country, city, latitude, longitude, device_type, browser, operating_system, screen_resolution, language, referrer, visitor_id
        FROM visits
        ORDER BY visited_at DESC`
     );
@@ -288,6 +294,8 @@ app.get("/api/admin/analytics/export", requireAdmin, async (_req, res, next) => 
       "visited_at",
       "country",
       "city",
+      "latitude",
+      "longitude",
       "device",
       "browser",
       "operating_system",
@@ -303,6 +311,8 @@ app.get("/api/admin/analytics/export", requireAdmin, async (_req, res, next) => 
           row.visited_at,
           row.country,
           row.city,
+          row.latitude,
+          row.longitude,
           row.device_type,
           row.browser,
           row.operating_system,

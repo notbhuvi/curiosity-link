@@ -3,6 +3,8 @@ import {
   Download,
   Eye,
   Globe2,
+  MapPin,
+  Navigation,
   LogOut,
   Palette,
   RefreshCcw,
@@ -227,6 +229,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   if (!analytics || !settings) return <div className="admin-loading">Loading dashboard...</div>;
 
+  const latestMappedVisit = analytics.recent.find((visit) => hasCoordinates(visit));
+
   return (
     <main className="admin-shell">
       <header className="admin-header">
@@ -282,6 +286,39 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         </Panel>
       </section>
 
+      <section className="map-panel">
+        <div className="panel-title-row">
+          <h2>Latest visitor map</h2>
+          <MapPin size={20} />
+        </div>
+        {latestMappedVisit ? (
+          <div className="map-grid">
+            <iframe
+              title="Latest visitor approximate map"
+              src={mapEmbedUrl(latestMappedVisit)}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+            <div className="map-details">
+              <p className="map-location">{locationLabel(latestMappedVisit)}</p>
+              <p>
+                Approximate IP location. City-level precision depends on the visitor network and
+                may be unavailable.
+              </p>
+              <a href={mapOpenUrl(latestMappedVisit)} target="_blank" rel="noreferrer">
+                <Navigation size={16} />
+                Open map
+              </a>
+            </div>
+          </div>
+        ) : (
+          <p className="empty-state">
+            No mappable coordinates yet. New visits will show here when GeoIP returns latitude and
+            longitude.
+          </p>
+        )}
+      </section>
+
       <section className="table-panel">
         <div className="panel-title-row">
           <h2>Recent visitors</h2>
@@ -295,8 +332,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             <thead>
               <tr>
                 <th>Date & time</th>
-                <th>Country</th>
-                <th>City</th>
+                <th>Location</th>
+                <th>Map</th>
                 <th>Device</th>
                 <th>Browser</th>
                 <th>Operating system</th>
@@ -307,8 +344,17 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
               {analytics.recent.map((visit, index) => (
                 <tr key={`${visit.visited_at}-${index}`}>
                   <td>{new Date(visit.visited_at).toLocaleString()}</td>
-                  <td>{visit.country}</td>
-                  <td>{visit.city}</td>
+                  <td>{locationLabel(visit)}</td>
+                  <td>
+                    {hasCoordinates(visit) ? (
+                      <a className="table-map-link" href={mapOpenUrl(visit)} target="_blank" rel="noreferrer">
+                        <MapPin size={15} />
+                        Map
+                      </a>
+                    ) : (
+                      "Unavailable"
+                    )}
+                  </td>
                   <td>{visit.device_type}</td>
                   <td>{visit.browser}</td>
                   <td>{visit.operating_system}</td>
@@ -429,4 +475,40 @@ function ColorInput({
       </span>
     </label>
   );
+}
+
+function hasCoordinates(visit: { latitude: number | null; longitude: number | null }) {
+  return typeof visit.latitude === "number" && typeof visit.longitude === "number";
+}
+
+function locationLabel(visit: { city: string; country: string; latitude: number | null; longitude: number | null }) {
+  const parts = [visit.city, displayCountry(visit.country)].filter(
+    (part) => part && part !== "Unknown"
+  );
+  if (parts.length > 0) return parts.join(", ");
+  if (hasCoordinates(visit)) return `${visit.latitude?.toFixed(3)}, ${visit.longitude?.toFixed(3)}`;
+  return "Unknown";
+}
+
+function displayCountry(country: string) {
+  if (!country || country === "Unknown") return "Unknown";
+  try {
+    if (country.length === 2) {
+      return new Intl.DisplayNames(["en"], { type: "region" }).of(country.toUpperCase()) || country;
+    }
+  } catch {
+    return country;
+  }
+  return country;
+}
+
+function mapOpenUrl(visit: { latitude: number | null; longitude: number | null }) {
+  return `https://www.openstreetmap.org/?mlat=${visit.latitude}&mlon=${visit.longitude}#map=10/${visit.latitude}/${visit.longitude}`;
+}
+
+function mapEmbedUrl(visit: { latitude: number | null; longitude: number | null }) {
+  const lat = visit.latitude || 0;
+  const lon = visit.longitude || 0;
+  const delta = 0.18;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - delta}%2C${lat - delta}%2C${lon + delta}%2C${lat + delta}&layer=mapnik&marker=${lat}%2C${lon}`;
 }
