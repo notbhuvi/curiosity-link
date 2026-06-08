@@ -1,5 +1,12 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'curiosity_app') THEN
+    CREATE ROLE curiosity_app LOGIN;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS admin_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username TEXT NOT NULL UNIQUE,
@@ -35,7 +42,21 @@ ALTER TABLE visits ADD COLUMN IF NOT EXISTS location_source TEXT NOT NULL DEFAUL
 CREATE INDEX IF NOT EXISTS idx_visits_visited_at ON visits (visited_at DESC);
 CREATE INDEX IF NOT EXISTS idx_visits_visitor_id ON visits (visitor_id);
 CREATE INDEX IF NOT EXISTS idx_visits_country ON visits (country);
+GRANT USAGE ON SCHEMA public TO curiosity_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON visits TO curiosity_app;
 ALTER TABLE visits ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'visits' AND policyname = 'curiosity_app_all'
+  ) THEN
+    CREATE POLICY curiosity_app_all ON visits
+      FOR ALL TO curiosity_app
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
@@ -71,7 +92,20 @@ Now tell me—what made you do it? 😉',
   '#070711'
 )
 ON CONFLICT (id) DO NOTHING;
+GRANT SELECT, INSERT, UPDATE, DELETE ON settings TO curiosity_app;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'settings' AND policyname = 'curiosity_app_all'
+  ) THEN
+    CREATE POLICY curiosity_app_all ON settings
+      FOR ALL TO curiosity_app
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "session" (
   "sid" varchar NOT NULL COLLATE "default",
@@ -81,5 +115,30 @@ CREATE TABLE IF NOT EXISTS "session" (
 );
 
 CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+GRANT SELECT, INSERT, UPDATE, DELETE ON admin_users TO curiosity_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "session" TO curiosity_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO curiosity_app;
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "session" ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'admin_users' AND policyname = 'curiosity_app_all'
+  ) THEN
+    CREATE POLICY curiosity_app_all ON admin_users
+      FOR ALL TO curiosity_app
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'session' AND policyname = 'curiosity_app_all'
+  ) THEN
+    CREATE POLICY curiosity_app_all ON "session"
+      FOR ALL TO curiosity_app
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;
